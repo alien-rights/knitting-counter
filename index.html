@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fbe3e4">
+<meta name="apple-mobile-web-app-title" content="Knitting">
+<title>Knitting Counter</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@600;800&display=swap" crossorigin>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fbf5ee;
+    --blush: #fbe3e4;
+    --surface: #ffffff;
+    --text: #3a2a2a;
+    --muted: #7d6c63;
+    --line: #ecd9cd;
+    --accent: #c2496a;
+    --accent-text: #ffffff;
+    --yarn: #f4a6b5;
+    --display: "Fredoka", ui-rounded, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: linear-gradient(var(--blush), var(--bg) 18rem) var(--bg);
+    color: var(--text);
+    font: 600 1rem/1.4 "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Yarn artwork. --yarn sets the colour of a ball wherever it is used. */
+  .sprite { position: absolute; width: 0; height: 0; }
+  .ball-fill { fill: var(--yarn); }
+  .ball-line, .tail { fill: none; }
+  .ball-fill, .ball-line, .tail {
+    stroke: color-mix(in srgb, var(--yarn) 72%, #5b3a3a);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+  .needle { stroke: #dcae82; stroke-width: 3.2; stroke-linecap: round; }
+  .knob { fill: var(--accent); }
+  .eye { fill: #5a3b3b; }
+  .mouth { fill: none; stroke: #5a3b3b; stroke-width: 1.6; stroke-linecap: round; }
+  .cheek { fill: #ee6f8c; opacity: 0.45; }
+  .zz { font: 600 9px var(--display); fill: var(--muted); }
+
+  main {
+    max-width: 28rem;
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding: max(1.25rem, env(safe-area-inset-top)) 1rem max(1.25rem, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+  }
+
+  section { flex: 1; display: flex; flex-direction: column; }
+
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Project list */
+  .hero { margin: 0.5rem 0 1.5rem; text-align: center; }
+  .hero-art {
+    display: block;
+    width: 6.5rem;
+    margin: 0 auto 0.5rem;
+    overflow: visible;
+    transform-origin: 50% 85%;
+    animation: wobble 1.4s ease-in-out;
+  }
+  @keyframes wobble {
+    25% { transform: rotate(-7deg); }
+    60% { transform: rotate(5deg); }
+    85% { transform: rotate(-2deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-art { animation: none; }
+  }
+  h1 { margin: 0; font: 600 2rem/1.15 var(--display); }
+  #summary { margin: 0.2rem 0 0; color: var(--muted); }
+
+  #new-project {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+    padding: 0.35rem;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: 999px;
+    box-shadow: 0 3px 0 var(--line);
+  }
+  #new-project:focus-within { border-color: var(--accent); }
+  #new-name {
+    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0.5rem 0.55rem 0.9rem;
+    background: none;
+    border: 0;
+    outline: none;
+  }
+  #new-name::placeholder { color: var(--muted); opacity: 0.8; }
+  #new-project button {
+    padding: 0.55rem 1.15rem;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: 0;
+    border-radius: 999px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  #projects { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
+  .project {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0.9rem 0.7rem 0.7rem;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: 1.4rem;
+    box-shadow: 0 3px 0 var(--line);
+    text-align: left;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+  }
+  .project:active { transform: translateY(3px); box-shadow: 0 0 0 var(--line); }
+  .yarn { flex: none; width: 2.6rem; height: 2.6rem; }
+  .project-name { flex: 1; min-width: 0; font-size: 1.05rem; font-weight: 800; overflow-wrap: anywhere; }
+  .project-count {
+    padding: 0.25rem 0.7rem;
+    background: color-mix(in srgb, var(--yarn) 28%, white);
+    color: color-mix(in srgb, var(--yarn) 30%, #3a2a2a);
+    border-radius: 999px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  .project-count b { font: 600 1.05rem var(--display); }
+
+  #empty { --yarn: #ecdccb; margin: 2rem 1rem; color: var(--muted); text-align: center; }
+  #empty svg { display: block; width: 6rem; margin: 0 auto 0.6rem; }
+  #empty strong { display: block; color: var(--text); font: 600 1.15rem var(--display); }
+  #empty p { margin: 0.2rem 0 0; }
+
+  /* Counter */
+  .toolbar { display: flex; justify-content: space-between; margin: 0 -0.5rem; }
+  .toolbar button {
+    padding: 0.5rem;
+    background: none;
+    border: 0;
+    border-radius: 0.5rem;
+    color: var(--muted);
+  }
+  #back { color: var(--accent); font-weight: 600; }
+
+  #name {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.35rem 0.5rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    font: 600 1.5rem var(--display);
+    text-align: center;
+    text-overflow: ellipsis;
+  }
+  #name:hover { border-color: var(--line); }
+  #name:focus { border-color: var(--line); background: var(--surface); outline: none; }
+
+  .readout { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem 0; }
+  #count {
+    font-family: var(--display);
+    font-size: clamp(5rem, 32vw, 9rem);
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+  #unit { color: var(--muted); margin-top: 0.5rem; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.85rem; }
+
+  #plus {
+    width: 100%;
+    min-height: 10rem;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: 0;
+    border-radius: 1.5rem;
+    font-size: 4.5rem;
+    font-weight: 300;
+    line-height: 1;
+    transition: transform 0.08s ease;
+  }
+  #plus:active { transform: scale(0.98); }
+
+  .secondary { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
+  .secondary button {
+    padding: 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<svg class="sprite" aria-hidden="true">
+  <symbol id="ball" viewBox="0 0 48 48">
+    <circle class="ball-fill" cx="24" cy="24" r="21"/>
+    <path class="ball-line" d="M3.3 20.4Q22 9 42.2 13.5M6.8 12Q20 5 34.5 5.8M16.8 4.3Q36 10 44.9 25.8M4.3 31.2Q12 40 27.7 44.7M43.7 31.2Q36 41 16.8 43.7"/>
+  </symbol>
+</svg>
+
+<template id="project-template">
+  <li>
+    <button type="button" class="project">
+      <svg class="yarn" viewBox="0 0 48 48" aria-hidden="true"><use href="#ball" width="48" height="48"/></svg>
+      <span class="project-name"></span>
+      <span class="project-count"><b></b> <span></span></span>
+    </button>
+  </li>
+</template>
+
+<main>
+  <section id="list-view">
+    <header class="hero">
+      <svg class="hero-art" viewBox="0 0 80 72" aria-hidden="true">
+        <line class="needle" x1="17" y1="6" x2="59" y2="69"/>
+        <line class="needle" x1="57" y1="6" x2="15" y2="69"/>
+        <circle class="knob" cx="17" cy="6" r="4"/>
+        <circle class="knob" cx="57" cy="6" r="4"/>
+        <g transform="translate(14 18) scale(0.96)">
+          <use href="#ball" width="48" height="48"/>
+          <circle class="eye" cx="17.5" cy="26" r="1.8"/>
+          <circle class="eye" cx="30.5" cy="26" r="1.8"/>
+          <path class="mouth" d="M21.5 29.5q2.5 2.5 5 0"/>
+          <circle class="cheek" cx="13" cy="30.5" r="2.6"/>
+          <circle class="cheek" cx="35" cy="30.5" r="2.6"/>
+        </g>
+        <path class="tail" d="M54 51C59 60 67 60 67 52S75 45 77 53"/>
+      </svg>
+      <h1>Knitting Counter</h1>
+      <p id="summary"></p>
+    </header>
+    <form id="new-project">
+      <input id="new-name" placeholder="What are you knitting?" aria-label="New project name" maxlength="60" autocomplete="off" required>
+      <button>Cast on</button>
+    </form>
+    <ul id="projects"></ul>
+    <div id="empty">
+      <svg viewBox="0 0 70 54" aria-hidden="true">
+        <g transform="translate(8 5)">
+          <use href="#ball" width="48" height="48"/>
+          <path class="mouth" d="M15.5 26q2 1.8 4 0M28.5 26q2 1.8 4 0M22.5 30.5q1.5 1.2 3 0"/>
+        </g>
+        <text class="zz" x="57" y="17">z</text>
+        <text class="zz" x="63" y="9" style="font-size: 7px">z</text>
+      </svg>
+      <strong>No projects yet</strong>
+      <p>Name your first one above to start counting rows.</p>
+    </div>
+  </section>
+
+  <section id="counter-view" hidden>
+    <div class="toolbar">
+      <button type="button" id="back">‹ Projects</button>
+      <button type="button" id="delete">Delete</button>
+    </div>
+    <input id="name" aria-label="Project name" maxlength="60" autocomplete="off">
+    <div class="readout">
+      <div id="count" aria-live="polite">0</div>
+      <div id="unit">rows</div>
+    </div>
+    <button type="button" id="plus" aria-label="Add one row">+</button>
+    <div class="secondary">
+      <button type="button" id="minus">− 1</button>
+      <button type="button" id="reset">Reset</button>
+    </div>
+  </section>
+</main>
+
+<script>
+  const STORAGE_KEY = 'knitting-counter';
+  const $ = (id) => document.getElementById(id);
+
+  let state = load();
+
+  function load() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (saved && Array.isArray(saved.projects)) return saved;
+    } catch {}
+    return { projects: [], currentId: null };
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {}
+  }
+
+  function current() {
+    return state.projects.find((p) => p.id === state.currentId);
+  }
+
+  const YARNS = ['#f4a6b5', '#f8b796', '#f3d47a', '#a5d9b9', '#a3cdee', '#c5b3ec'];
+
+  // Each project keeps the same yarn colour, picked from its id.
+  function yarnColor(id) {
+    let sum = 0;
+    for (const ch of id) sum += ch.charCodeAt(0);
+    return YARNS[sum % YARNS.length];
+  }
+
+  function render() {
+    const project = current();
+    $('list-view').hidden = Boolean(project);
+    $('counter-view').hidden = !project;
+    if (project) renderCounter(project);
+    else renderList();
+    syncWakeLock();
+  }
+
+  // Keep the screen on while a counter is open. The browser drops the lock
+  // whenever the page is hidden, so it is asked for again on return.
+  let wakeLock = null;
+
+  function syncWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    const wanted = Boolean(current()) && document.visibilityState === 'visible';
+    if (wanted && !wakeLock) {
+      wakeLock = navigator.wakeLock.request('screen').catch(() => null);
+    } else if (!wanted && wakeLock) {
+      wakeLock.then((lock) => lock?.release());
+      wakeLock = null;
+    }
+  }
+
+  document.addEventListener('visibilitychange', syncWakeLock);
+
+  // If the app is open in two places, follow the other one's changes
+  // instead of overwriting them with stale counts.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== STORAGE_KEY) return;
+    state = load();
+    render();
+  });
+
+  function renderList() {
+    $('projects').replaceChildren(...state.projects.map((p) => {
+      const li = $('project-template').content.firstElementChild.cloneNode(true);
+      const button = li.querySelector('.project');
+      button.style.setProperty('--yarn', yarnColor(p.id));
+      button.addEventListener('click', () => openProject(p.id));
+      li.querySelector('.project-name').textContent = p.name;
+      li.querySelector('.project-count b').textContent = p.count;
+      li.querySelector('.project-count span').textContent = p.count === 1 ? 'row' : 'rows';
+      return li;
+    }));
+
+    const total = state.projects.length;
+    $('empty').hidden = total > 0;
+    $('summary').textContent = total === 0
+      ? 'Ready to cast on?'
+      : `${total} ${total === 1 ? 'project' : 'projects'} on the needles`;
+  }
+
+  function renderCounter(project) {
+    if (document.activeElement !== $('name')) $('name').value = project.name;
+    $('count').textContent = project.count;
+    $('unit').textContent = project.count === 1 ? 'row' : 'rows';
+    $('minus').disabled = $('reset').disabled = project.count === 0;
+  }
+
+  function openProject(id) {
+    state.currentId = id;
+    save();
+    render();
+  }
+
+  function setCount(n) {
+    const project = current();
+    if (!project) return;
+    project.count = Math.max(0, n);
+    save();
+    renderCounter(project);
+  }
+
+  $('new-project').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('new-name').value.trim();
+    if (!name) return;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    state.projects.unshift({ id, name, count: 0 });
+    $('new-name').value = '';
+    openProject(id);
+  });
+
+  $('back').addEventListener('click', () => openProject(null));
+
+  $('plus').addEventListener('click', () => {
+    setCount(current().count + 1);
+    navigator.vibrate?.(10);
+  });
+
+  $('minus').addEventListener('click', () => setCount(current().count - 1));
+
+  $('reset').addEventListener('click', () => {
+    const project = current();
+    if (confirm(`Reset "${project.name}" back to 0?`)) setCount(0);
+  });
+
+  $('delete').addEventListener('click', () => {
+    const project = current();
+    if (!confirm(`Delete "${project.name}"? Its count will be lost.`)) return;
+    state.projects = state.projects.filter((p) => p !== project);
+    openProject(null);
+  });
+
+  // Renaming: the title is an input. An emptied name snaps back on blur.
+  $('name').addEventListener('input', () => {
+    const name = $('name').value.trim();
+    if (!name) return;
+    current().name = name;
+    save();
+  });
+  $('name').addEventListener('blur', () => {
+    const project = current();
+    if (project) $('name').value = project.name;
+  });
+  $('name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('name').blur();
+  });
+
+  // Keyboard counting, unless focus is on a control that handles the key itself.
+  document.addEventListener('keydown', (e) => {
+    const project = current();
+    if (!project || e.target.closest('input, button') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === ' ' || e.key === '+' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      setCount(project.count + 1);
+    } else if (e.key === '-' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      setCount(project.count - 1);
+    }
+  });
+
+  render();
+
+  // Lets the app open offline once it has been loaded from a web address.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
